@@ -1,0 +1,158 @@
+package com.miguel.jeronimo.DigitalBank.Entities;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String cpf;
+
+    private String cnpj;
+
+    private String pixKey;
+
+    private PixKeyType pixKeyType;
+
+    private String name;
+
+    private String email;
+
+    private String password;
+
+    private String phone;
+
+    private LocalDate bornDate;
+
+    private boolean person;
+
+    private boolean active;
+
+    private LocalDate createdDate = LocalDate.now();
+
+    private BigDecimal balance;
+
+    public User() {
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getCpf() {
+        return cpf;
+    }
+
+    public void setCpf(String cpf) {
+        this.cpf = cpf;
+    }
+
+    public String getCnpj() {
+        return cnpj;
+    }
+
+    public void setCnpj(String cnpj) {
+        this.cnpj = cnpj;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public boolean isPerson() {
+        return person;
+    }
+
+    public void setPerson(boolean person) {
+        this.person = person;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public BigDecimal getBalance() {
+        return balance;
+    }
+
+    public void setBalance(BigDecimal balance) {
+        this.balance = balance;
+    }
+
+    public String getPixKey() {
+        return pixKey;
+    }
+
+    public void setPixKey(String pixKey) {
+        this.pixKey = pixKey;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public LocalDate getBornDate() {
+        return bornDate;
+    }
+
+    public void setBornDate(LocalDate bornDate) {
+        this.bornDate = bornDate;
+    }
+
+    public LocalDate getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(LocalDate createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public PixKeyType getPixKeyType() {
+        return pixKeyType;
+    }
+
+    public void setPixKeyType(PixKeyType pixKeyType) {
+        this.pixKeyType = pixKeyType;
+    }
+}
