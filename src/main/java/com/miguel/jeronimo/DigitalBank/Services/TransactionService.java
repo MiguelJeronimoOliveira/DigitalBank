@@ -55,7 +55,7 @@ public class TransactionService {
 
     public void processTransaction(Transaction transaction) {
         transaction.getSender().setBalance(transaction.getSender().getBalance().subtract(transaction.getAmount()));
-        transaction.getReceiver().setBalance(transaction.getReceiver().getBalance().subtract(transaction.getAmount()));
+        transaction.getReceiver().setBalance(transaction.getReceiver().getBalance().add(transaction.getAmount()));
         transaction.setStatus(TransactionStatus.COMPLETED);
     }
 
