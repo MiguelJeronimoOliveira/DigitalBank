@@ -1,4 +1,4 @@
-package com.miguel.jeronimo.DigitalBank.Entities;
+package com.miguel.jeronimo.DigitalBank.Enums;
 
 public enum PixKeyType {
     CPF,
