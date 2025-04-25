@@ -1,6 +1,7 @@
 package com.miguel.jeronimo.DigitalBank.Entities;
 
 import com.miguel.jeronimo.DigitalBank.Enums.TransactionStatus;
+import com.miguel.jeronimo.DigitalBank.Enums.TransactionType;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -14,10 +15,14 @@ public class Transaction {
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "sender_id")
     private User sender;
 
     @ManyToOne
+    @JoinColumn(name = "receiver_id")
     private User receiver;
+
+    private TransactionType type;
 
     @Enumerated(EnumType.STRING)
     private TransactionStatus status = TransactionStatus.PENDING;
@@ -105,5 +110,13 @@ public class Transaction {
 
     public void setRefundDate(LocalDateTime refundDate) {
         this.refundDate = refundDate;
+    }
+
+    public TransactionType getType() {
+        return type;
+    }
+
+    public void setType(TransactionType type) {
+        this.type = type;
     }
 }
