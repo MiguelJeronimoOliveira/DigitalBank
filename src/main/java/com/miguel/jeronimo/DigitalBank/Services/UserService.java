@@ -6,6 +6,8 @@ import com.miguel.jeronimo.DigitalBank.Exceptions.ArgumentAlreadyExistsException
 import com.miguel.jeronimo.DigitalBank.Exceptions.InvalidPaswwrodException;
 import com.miguel.jeronimo.DigitalBank.Exceptions.UserNotFoundException;
 import com.miguel.jeronimo.DigitalBank.Repositories.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -14,13 +16,15 @@ import java.util.UUID;
 @Service
 public class UserService {
 
+    private static Logger log = LoggerFactory.getLogger(UserService.class);
+
     private final UserRepository repository;
 
     public UserService(UserRepository repository) {
         this.repository = repository;
     }
 
-    public void createUser(User user) {
+    public void createUser(User user) throws ArgumentAlreadyExistsException {
 
         try{
             validateUser(user);
@@ -28,8 +32,9 @@ public class UserService {
             setPixKey(user);
             repository.save(user);
 
-        }catch (Exception e){
-            e.printStackTrace();
+        }catch (ArgumentAlreadyExistsException e){
+            log.error(e.getMessage());
+            throw e;
         }
 
     }
@@ -48,6 +53,22 @@ public class UserService {
         }
     }
 
+    public void deleteUser(Long id, String password) {
+        User user = repository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User with ID " + id + " not found"));
+
+        if (!user.getPassword().equals(password)) {
+            throw new InvalidPaswwrodException("Wrong password");
+        }
+
+        repository.deleteById(id);
+    }
+
+    public User findUser(String pixKey){
+        Optional<User> user = repository.findByPixKey(pixKey);
+        return user.orElse(null);
+    }
+
     public void validateUser(User user) throws ArgumentAlreadyExistsException {
 
         if(repository.findByCpf(user.getCpf()).isPresent())
@@ -64,22 +85,6 @@ public class UserService {
                 throw new IllegalArgumentException("CPF is invalid");
         }
 
-    }
-
-    public void deleteUser(Long id, String password) {
-        User user = repository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User with ID " + id + " not found"));
-
-        if (!user.getPassword().equals(password)) {
-            throw new InvalidPaswwrodException("Wrong password");
-        }
-
-        repository.deleteById(id);
-    }
-
-    public User findUser(String pixKey){
-        Optional<User> user = repository.findByPixKey(pixKey);
-        return user.orElse(null);
     }
 
     public boolean validateCPF(User user){
