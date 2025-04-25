@@ -1,5 +1,6 @@
 package com.miguel.jeronimo.DigitalBank.Entities;
 
+import com.miguel.jeronimo.DigitalBank.Enums.TransactionStatus;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
