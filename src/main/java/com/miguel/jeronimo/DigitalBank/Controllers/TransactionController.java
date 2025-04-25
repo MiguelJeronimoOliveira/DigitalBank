@@ -1,6 +1,7 @@
 package com.miguel.jeronimo.DigitalBank.Controllers;
 
 import com.miguel.jeronimo.DigitalBank.DTOs.TransactionDTO;
+import com.miguel.jeronimo.DigitalBank.Exceptions.InsufficientBalanceException;
 import com.miguel.jeronimo.DigitalBank.Services.TransactionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +20,7 @@ public class TransactionController {
     }
 
     @PostMapping
-    public ResponseEntity postTransaction(@RequestBody TransactionDTO request) {
+    public ResponseEntity postTransaction(@RequestBody TransactionDTO request) throws InsufficientBalanceException {
         service.createTransaction(request);
         return ResponseEntity.ok().build();
     }

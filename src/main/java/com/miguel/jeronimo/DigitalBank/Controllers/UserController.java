@@ -1,6 +1,7 @@
 package com.miguel.jeronimo.DigitalBank.Controllers;
 
 import com.miguel.jeronimo.DigitalBank.Entities.User;
+import com.miguel.jeronimo.DigitalBank.Exceptions.ArgumentAlreadyExistsException;
 import com.miguel.jeronimo.DigitalBank.Services.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +20,7 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity postUser(@RequestBody User user) {
+    public ResponseEntity postUser(@RequestBody User user) throws ArgumentAlreadyExistsException {
         service.createUser(user);
         return ResponseEntity.ok().build();
     }
