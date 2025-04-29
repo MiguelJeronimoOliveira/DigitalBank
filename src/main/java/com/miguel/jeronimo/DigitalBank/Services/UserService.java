@@ -3,13 +3,15 @@ package com.miguel.jeronimo.DigitalBank.Services;
 import com.miguel.jeronimo.DigitalBank.Enums.PixKeyType;
 import com.miguel.jeronimo.DigitalBank.Entities.User;
 import com.miguel.jeronimo.DigitalBank.Exceptions.ArgumentAlreadyExistsException;
-import com.miguel.jeronimo.DigitalBank.Exceptions.InvalidPaswwrodException;
+import com.miguel.jeronimo.DigitalBank.Exceptions.InvalidPasswordException;
 import com.miguel.jeronimo.DigitalBank.Exceptions.UserNotFoundException;
 import com.miguel.jeronimo.DigitalBank.Repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,11 +34,50 @@ public class UserService {
             setPixKey(user);
             repository.save(user);
 
-        }catch (ArgumentAlreadyExistsException e){
+        }catch (ArgumentAlreadyExistsException | IllegalArgumentException e){
             log.error(e.getMessage());
             throw e;
         }
 
+    }
+
+    public void deleteUser(Long userId, String userPassword) {
+        User user = repository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User with ID " + userId + " not found"));
+
+        if (!user.getPassword().equals(userPassword)) {
+            throw new InvalidPasswordException("");
+        }
+
+        repository.deleteById(userId);
+    }
+
+    public List<User> getUsers() {
+        return repository.findAll();
+    }
+
+    public void desactivateUser(Long userId, String userPassword) {
+        User user = repository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User with ID " + userId + " not found"));
+
+        if (!user.getPassword().equals(userPassword)) {
+            throw new InvalidPasswordException("");
+        }
+
+        user.setActive(false);
+        repository.save(user);
+    }
+
+    public User findUser(String pixKey){
+        Optional<User> user = repository.findByPixKey(pixKey);
+        return user.orElse(null);
+    }
+
+    public BigDecimal getUserBalance(Long userId){
+        User user = repository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(""));
+
+        return user.getBalance();
     }
 
     public void setPixKey(User user){
@@ -51,22 +92,6 @@ public class UserService {
                 user.setPixKey(UUID.randomUUID().toString());
                 break;
         }
-    }
-
-    public void deleteUser(Long id, String password) {
-        User user = repository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User with ID " + id + " not found"));
-
-        if (!user.getPassword().equals(password)) {
-            throw new InvalidPaswwrodException("Wrong password");
-        }
-
-        repository.deleteById(id);
-    }
-
-    public User findUser(String pixKey){
-        Optional<User> user = repository.findByPixKey(pixKey);
-        return user.orElse(null);
     }
 
     public void validateUser(User user) throws ArgumentAlreadyExistsException {
@@ -87,7 +112,7 @@ public class UserService {
 
     }
 
-    public boolean validateCPF(User user){
+    private boolean validateCPF(User user){
         if (user.getCpf().length() != 11 || user.getCpf().matches("(\\d)\\1{10}")) return false;
 
         int sum = 0, weight = 10;
@@ -103,7 +128,7 @@ public class UserService {
         return digit1 == (user.getCpf().charAt(9) - '0') && digit2 == (user.getCpf().charAt(10) - '0');
     }
 
-    public boolean validateCNPJ(User user){
+    private boolean validateCNPJ(User user){
         if (user.getCnpj().length() != 14 || user.getCnpj().matches("(\\d)\\1{13}")) return false;
 
         int[] pesos1 = {5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2};
