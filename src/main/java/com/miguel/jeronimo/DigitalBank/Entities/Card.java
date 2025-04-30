@@ -30,7 +30,6 @@ public class Card {
 
     @OneToOne
     @JoinColumn(name = "user_id")
-    @JsonIgnore
     private User user;
 
     private boolean credit;
