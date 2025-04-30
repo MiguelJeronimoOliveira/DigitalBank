@@ -1,6 +1,8 @@
 package com.miguel.jeronimo.DigitalBank.Services;
 
 import com.miguel.jeronimo.DigitalBank.DTOs.CardDTO;
+import com.miguel.jeronimo.DigitalBank.DTOs.PayInstallmentsDTO;
+import com.miguel.jeronimo.DigitalBank.DTOs.UserResquestDTO;
 import com.miguel.jeronimo.DigitalBank.Entities.Card;
 import com.miguel.jeronimo.DigitalBank.Entities.CardStatement;
 import com.miguel.jeronimo.DigitalBank.Entities.Transaction;
@@ -78,9 +80,11 @@ public class CardService {
         }
     }
 
-    public void payInstallments(CardDTO request, BigDecimal value) {
-        User user = auxService.findUserById(request.user().getId())
+    public void payInstallments(PayInstallmentsDTO request) {
+        User user = auxService.findUserById(request.userId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        BigDecimal value = request.value();
 
         int i = 0;
         while (value.compareTo(BigDecimal.ZERO) > 0) {
