@@ -35,8 +35,8 @@ public class TransactionAuxService {
         return userRepository.findByPixKey(pixKey);
     }
 
-    public Optional<CardStatement> findCardStatmentActiveByUser(User user) {
-        return statementRepository.findCardStatmentActiveByUser(user);
+    public Optional<CardStatement> findCardStatmentActiveByUserCard(Card card) {
+        return statementRepository.findCardStatmentActiveByUserCard(card);
     }
 
     public void save(User user) {

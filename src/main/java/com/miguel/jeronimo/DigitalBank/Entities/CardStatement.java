@@ -1,5 +1,6 @@
 package com.miguel.jeronimo.DigitalBank.Entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ public class CardStatement {
 
     @ManyToOne
     @JoinColumn(name = "card_id")
+    @JsonIgnore
     private Card card;
 
     private BigDecimal value;

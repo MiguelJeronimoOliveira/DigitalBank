@@ -34,11 +34,14 @@ public class User {
 
     private boolean person;
 
-    private boolean active;
+    private boolean active = true;
 
     private LocalDate createdDate = LocalDate.now();
 
-    private BigDecimal balance;
+    private BigDecimal balance = BigDecimal.valueOf(500);
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Card card;
 
     public User() {
     }
@@ -153,5 +156,13 @@ public class User {
 
     public void setPixKeyType(PixKeyType pixKeyType) {
         this.pixKeyType = pixKeyType;
+    }
+
+    public Card getCard() {
+        return card;
+    }
+
+    public void setCard(Card card) {
+        this.card = card;
     }
 }

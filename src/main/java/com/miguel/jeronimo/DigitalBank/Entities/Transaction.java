@@ -22,12 +22,16 @@ public class Transaction {
     @JoinColumn(name = "receiver_id")
     private User receiver;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private TransactionType type;
 
     @Enumerated(EnumType.STRING)
     private TransactionStatus status = TransactionStatus.PENDING;
 
     private BigDecimal amount;
+
+    private int installmentsNumber;
 
     private LocalDateTime Date = LocalDateTime.now();
 
@@ -118,5 +122,13 @@ public class Transaction {
 
     public void setType(TransactionType type) {
         this.type = type;
+    }
+
+    public int getInstallmentsNumber() {
+        return installmentsNumber;
+    }
+
+    public void setInstallmentsNumber(int installmentsNumber) {
+        this.installmentsNumber = installmentsNumber;
     }
 }
