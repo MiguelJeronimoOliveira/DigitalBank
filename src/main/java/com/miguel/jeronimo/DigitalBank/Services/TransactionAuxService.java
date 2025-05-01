@@ -39,6 +39,10 @@ public class TransactionAuxService {
         return statementRepository.findCardStatmentActiveByUserCard(card);
     }
 
+    public Optional<Card>findCardById(Long id){
+        return cardRepository.findCardById(id);
+    }
+
     public void save(User user) {
         userRepository.save(user);
     }

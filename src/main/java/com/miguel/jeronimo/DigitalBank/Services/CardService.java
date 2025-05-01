@@ -2,10 +2,8 @@ package com.miguel.jeronimo.DigitalBank.Services;
 
 import com.miguel.jeronimo.DigitalBank.DTOs.CardDTO;
 import com.miguel.jeronimo.DigitalBank.DTOs.PayInstallmentsDTO;
-import com.miguel.jeronimo.DigitalBank.DTOs.UserResquestDTO;
 import com.miguel.jeronimo.DigitalBank.Entities.Card;
 import com.miguel.jeronimo.DigitalBank.Entities.CardStatement;
-import com.miguel.jeronimo.DigitalBank.Entities.Transaction;
 import com.miguel.jeronimo.DigitalBank.Entities.User;
 import com.miguel.jeronimo.DigitalBank.Exceptions.CardNotFoundException;
 import com.miguel.jeronimo.DigitalBank.Exceptions.InsufficientBalanceException;
@@ -13,6 +11,8 @@ import com.miguel.jeronimo.DigitalBank.Exceptions.InvalidPasswordException;
 import com.miguel.jeronimo.DigitalBank.Exceptions.UserNotFoundException;
 import com.miguel.jeronimo.DigitalBank.Repositories.CardRepository;
 import com.miguel.jeronimo.DigitalBank.Repositories.UserRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -59,6 +59,53 @@ public class CardService {
         repository.save(card);
     }
 
+    @Transactional
+    @Scheduled(cron = "0 0 0 * * *")
+    public void autodebit() {
+        System.out.println("iniciando timer");
+
+        User user = auxService.findUserById(2L)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        Card card = auxService.findCardById(user.getCard().getId())
+                .orElseThrow(() -> new CardNotFoundException("Card not found"));
+
+        Optional<CardStatement> activeStatementOptional = auxService.findCardStatmentActiveByUserCard(user.getCard());
+
+        if (activeStatementOptional.isPresent() && card.isAutoDebit()) {
+            CardStatement activeStatement = activeStatementOptional.get();
+
+            LocalDate statementDueDate = LocalDate.of(activeStatement.getYear(), activeStatement.getMonth(), user.getCard().getDueDate());
+            boolean isPastDueOrToday = !statementDueDate.isAfter(LocalDate.now());
+
+            if (isPastDueOrToday && activeStatement.isActive()) {
+                activeStatement.setActive(false);
+                activeStatement.setPaid(true);
+
+                int nextMonth = statementDueDate.plusMonths(1).getMonthValue();
+                int nextYear = statementDueDate.plusMonths(1).getYear();
+
+                card.getCardStatement()
+                        .stream()
+                        .filter(cs -> cs.getMonth() == nextMonth && cs.getYear() == nextYear)
+                        .findFirst()
+                        .ifPresent(next -> next.setActive(true));
+
+                validateBalance(user, activeStatement);
+
+                BigDecimal statementValue = activeStatement.getValue();
+
+                user.setBalance(user.getBalance().subtract(statementValue));
+                activeStatement.setValue(BigDecimal.ZERO);
+                user.getCard().setCardLimit(
+                        user.getCard().getCardLimit().add(statementValue)
+                );
+
+                auxService.save(user);
+            }
+        }
+    }
+
     public void payActiveInstallment(CardDTO request) {
         User user = auxService.findUserById(request.user().getId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -68,15 +115,34 @@ public class CardService {
         if (activeStatementOptional.isPresent()) {
             CardStatement activeStatement = activeStatementOptional.get();
 
-            validateBalance(user, activeStatement);
+            LocalDate statementDueDate = LocalDate.of(activeStatement.getYear(), activeStatement.getMonth(), user.getCard().getDueDate());
+            boolean isPastDueOrToday = !statementDueDate.isAfter(LocalDate.now());
 
-            BigDecimal statementValue = activeStatement.getValue();
+            if (isPastDueOrToday && activeStatement.isActive()) {
+                activeStatement.setActive(false);
+                activeStatement.setPaid(true);
 
-            user.setBalance(user.getBalance().subtract(statementValue));
-            activeStatement.setValue(BigDecimal.ZERO);
-            user.getCard().setCardLimit(user.getCard().getCardLimit().add(statementValue));
 
-            auxService.save(user);
+                int nextMonth = statementDueDate.plusMonths(1).getMonthValue();
+                int nextYear = statementDueDate.plusMonths(1).getYear();
+
+                user.getCard().getCardStatement()
+                        .stream()
+                        .filter(cs -> cs.getMonth() == nextMonth && cs.getYear() == nextYear)
+                        .findFirst()
+                        .ifPresent(next -> next.setActive(true));
+
+
+                validateBalance(user, activeStatement);
+
+                BigDecimal statementValue = activeStatement.getValue();
+
+                user.setBalance(user.getBalance().subtract(statementValue));
+                activeStatement.setValue(BigDecimal.ZERO);
+                user.getCard().setCardLimit(user.getCard().getCardLimit().add(statementValue));
+
+                auxService.save(user);
+            }
         }
     }
 
@@ -84,38 +150,60 @@ public class CardService {
         User user = auxService.findUserById(request.userId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        BigDecimal value = request.value();
+        BigDecimal remainingValue = request.value();
+        int offset = 0;
 
-        int i = 0;
-        while (value.compareTo(BigDecimal.ZERO) > 0) {
-            LocalDate dueDate = LocalDate.now().plusMonths(i);
-            int month = dueDate.getMonthValue();
-            int year = dueDate.getYear();
+        while (remainingValue.compareTo(BigDecimal.ZERO) > 0) {
+            LocalDate futureDate = LocalDate.now().plusMonths(offset);
+            int month = futureDate.getMonthValue();
+            int year = futureDate.getYear();
 
-            Optional<CardStatement> statementOptional = user.getCard().getCardStatement()
+            Optional<CardStatement> optionalStatement = user.getCard().getCardStatement()
                     .stream()
-                    .filter(cs -> cs.getMonth() == month && cs.getYear() == year && cs.getCard().getUser().equals(user))
+                    .filter(cs -> cs.getMonth() == month && cs.getYear() == year)
                     .findFirst();
 
-            if (statementOptional.isPresent()) {
-                CardStatement statement = statementOptional.get();
-                BigDecimal currentStatementValue = statement.getValue();
+            if (optionalStatement.isEmpty()) break;
 
-                if (value.compareTo(currentStatementValue) >= 0) {
-                    value = value.subtract(currentStatementValue);
-                    user.setBalance(user.getBalance().subtract(currentStatementValue));
-                    statement.setValue(BigDecimal.ZERO);
-                    user.getCard().setCardLimit(user.getCard().getCardLimit().add(currentStatementValue));
-                } else {
-                    statement.setValue(currentStatementValue.subtract(value));
-                    user.setBalance(user.getBalance().subtract(value));
-                    user.getCard().setCardLimit(user.getCard().getCardLimit().add(value));
-                    value = BigDecimal.ZERO;
-                }
-            } else {
-                break;
+            CardStatement statement = optionalStatement.get();
+
+            LocalDate dueDate = LocalDate.of(statement.getYear(), statement.getMonth(), user.getCard().getDueDate());
+            boolean isPastDueOrToday = !dueDate.isAfter(LocalDate.now());
+
+            BigDecimal statementValue = statement.getValue();
+
+            if (statementValue.compareTo(BigDecimal.ZERO) == 0) {
+                offset++;
+                continue;
             }
-            i++;
+
+            if (remainingValue.compareTo(statementValue) >= 0) {
+                remainingValue = remainingValue.subtract(statementValue);
+                user.setBalance(user.getBalance().subtract(statementValue));
+                user.getCard().setCardLimit(user.getCard().getCardLimit().add(statementValue));
+
+                statement.setValue(BigDecimal.ZERO);
+
+                if (isPastDueOrToday && statement.isActive()) {
+                    statement.setActive(false);
+                    statement.setPaid(true);
+
+                    LocalDate nextDate = futureDate.plusMonths(1);
+                    user.getCard().getCardStatement().stream()
+                            .filter(cs -> cs.getMonth() == nextDate.getMonthValue()
+                                    && cs.getYear() == nextDate.getYear())
+                            .findFirst()
+                            .ifPresent(next -> next.setActive(true));
+                }
+
+            } else {
+                statement.setValue(statementValue.subtract(remainingValue));
+                user.setBalance(user.getBalance().subtract(remainingValue));
+                user.getCard().setCardLimit(user.getCard().getCardLimit().add(remainingValue));
+                remainingValue = BigDecimal.ZERO;
+            }
+
+            offset++;
         }
 
         auxService.save(user);

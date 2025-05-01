@@ -1,16 +1,20 @@
 package com.miguel.jeronimo.DigitalBank.Services;
 
+import com.miguel.jeronimo.DigitalBank.DTOs.CreditTransactionDTO;
 import com.miguel.jeronimo.DigitalBank.Entities.Card;
 import com.miguel.jeronimo.DigitalBank.Entities.CardStatement;
 import com.miguel.jeronimo.DigitalBank.Entities.Transaction;
+import com.miguel.jeronimo.DigitalBank.Entities.User;
 import com.miguel.jeronimo.DigitalBank.Enums.TransactionStatus;
-import com.miguel.jeronimo.DigitalBank.Repositories.TransactionRepository;
+import com.miguel.jeronimo.DigitalBank.Enums.TransactionType;
+import com.miguel.jeronimo.DigitalBank.Exceptions.UserNotFoundException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Optional;
 
 @Component
 public class TransactionConsumer {

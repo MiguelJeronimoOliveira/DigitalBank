@@ -2,6 +2,7 @@ package com.miguel.jeronimo.DigitalBank.Entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,9 +21,9 @@ public class Card {
 
     private int expYear;
 
-    private boolean expired = false;
-
     private int cvv = new Random().nextInt(999) + 100;
+
+    private boolean expired = false;
 
     private String cardPassword;
 
@@ -33,6 +34,8 @@ public class Card {
     private User user;
 
     private boolean credit;
+
+    private boolean autoDebit;
 
     private int dueDate;
 
@@ -157,5 +160,13 @@ public class Card {
 
     public void setCardStatement(List<CardStatement> cardStatement) {
         this.cardStatement = cardStatement;
+    }
+
+    public boolean isAutoDebit() {
+        return autoDebit;
+    }
+
+    public void setAutoDebit(boolean autoDebit) {
+        this.autoDebit = autoDebit;
     }
 }
