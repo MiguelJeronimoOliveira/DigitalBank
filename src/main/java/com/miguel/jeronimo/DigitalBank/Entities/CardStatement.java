@@ -28,6 +28,8 @@ public class CardStatement {
 
     private boolean paid;
 
+    private BigDecimal totalValue;
+
     public Long getId() {
         return id;
     }
@@ -82,5 +84,13 @@ public class CardStatement {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public BigDecimal getTotalValue() {
+        return totalValue;
+    }
+
+    public void setTotalValue(BigDecimal totalValue) {
+        this.totalValue = totalValue;
     }
 }
