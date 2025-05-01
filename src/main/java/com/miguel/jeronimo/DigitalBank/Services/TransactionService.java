@@ -1,7 +1,7 @@
 package com.miguel.jeronimo.DigitalBank.Services;
 
-import com.miguel.jeronimo.DigitalBank.DTOs.CardDTO;
 import com.miguel.jeronimo.DigitalBank.DTOs.CreditTransactionDTO;
+import com.miguel.jeronimo.DigitalBank.DTOs.DebitTransactionDTO;
 import com.miguel.jeronimo.DigitalBank.DTOs.TransactionDTO;
 import com.miguel.jeronimo.DigitalBank.Entities.Card;
 import com.miguel.jeronimo.DigitalBank.Entities.CardStatement;
@@ -38,8 +38,7 @@ public class TransactionService {
         this.producer = producer;
     }
 
-
-    public Transaction DTOToEntity(TransactionDTO request) {
+    public Transaction DTOToPixEntity(TransactionDTO request) {
         Transaction transaction = new Transaction();
 
         User sender = auxService.findUserById(request.sender().getId())
@@ -48,60 +47,66 @@ public class TransactionService {
         User receiver = auxService.findUserByPixKey(request.receiver().getPixKey())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        transaction.setType(request.type());
         transaction.setSender(sender);
         transaction.setReceiver(receiver);
         transaction.setAmount(request.amount());
         transaction.setInstallmentsNumber(0);
+        transaction.setType(TransactionType.PIX);
 
         return transaction;
     }
 
-    public void createTransaction(TransactionDTO request) throws InsufficientBalanceException {
-        Transaction transaction = DTOToEntity(request);
+    public Transaction DTOtoDebitEntity(DebitTransactionDTO request) {
+        User user = auxService.findUserById(request.sender().getId())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        Transaction transaction = new Transaction();
+        transaction.setType(TransactionType.DEBIT);
+        transaction.setInstallmentsNumber(0);
+        transaction.setAmount(request.amount());
+        transaction.setSender(user);
+        transaction.setReceiver(null);
+
+        return transaction;
+    }
+
+    public void createPixTransaction(TransactionDTO request) throws InsufficientBalanceException {
+        Transaction transaction = DTOToPixEntity(request);
 
         try {
 
             validateTransaction(transaction);
 
+            transaction.setType(TransactionType.PIX);
             transaction.setStatus(TransactionStatus.PROCESSING);
-
-            switch (transaction.getType()) {
-                case PIX -> producer.send("processPix-topic", transaction);
-                case DEBIT-> producer.send("processDebit-topic", transaction);
-            }
+            producer.send("processPix-topic", transaction);
 
 
         }catch (InsufficientBalanceException | IllegalArgumentException e) {
             transaction.setStatus(TransactionStatus.FAILED);
             repository.save(transaction);
             log.error(e.getMessage());
-            throw e;
         }
     }
 
-    public void refundTransaction(Long id) {
-        Optional<Transaction> transactionOptional = repository.findById(id);
+    public void createDebitTransaction(DebitTransactionDTO request) throws InsufficientBalanceException {
+        Transaction transaction = DTOtoDebitEntity(request);
 
-        LocalDateTime actualTime = LocalDateTime.now();
+        transaction.setStatus(TransactionStatus.PROCESSING);
 
-        if(transactionOptional.isPresent() &&
-        transactionOptional.get().getDate().isBefore(actualTime.plusMinutes(10))) {
-            
-            Transaction transaction = transactionOptional.get();
-            producer.send("refund-topic", transaction);
-
-            repository.save(transaction);
-        }
+        producer.send("processDebit-topic", transaction);
     }
 
-    public void cancelTransaction(Long id) {
-        Optional<Transaction> transactionOptional = repository.findById(id);
+    public void createCreditTransaction(CreditTransactionDTO creditTransaction, User user) {
+        Transaction transaction = new Transaction();
+        transaction.setType(TransactionType.CREDIT);
+        transaction.setInstallmentsNumber(creditTransaction.installmentsNumber());
+        transaction.setAmount(creditTransaction.amount());
+        transaction.setStatus(TransactionStatus.COMPLETED);
+        transaction.setSender(user);
+        transaction.setReceiver(null);
 
-        if(transactionOptional.isPresent()) {
-            Transaction transaction = transactionOptional.get();
-            transaction.setStatus(TransactionStatus.CANCELLED);
-        }
+        repository.save(transaction);
     }
 
     public void updateInstallment(CreditTransactionDTO transaction) {
@@ -129,6 +134,7 @@ public class TransactionService {
         if (activeStatement.isPresent() && card.getDueDate() >= today.getDayOfMonth()) {
             CardStatement currentStatement = activeStatement.get();
             currentStatement.setValue(currentStatement.getValue().add(installmentValue));
+            currentStatement.setTotalValue(currentStatement.getTotalValue().add(installmentValue));
             startIndex = 1;
         }
 
@@ -145,12 +151,14 @@ public class TransactionService {
             if (existingStatement.isPresent()) {
                 CardStatement statement = existingStatement.get();
                 statement.setValue(statement.getValue().add(installmentValue));
+                statement.setTotalValue(statement.getTotalValue().add(installmentValue));
             } else {
                 CardStatement newStatement = new CardStatement();
                 newStatement.setCard(card);
                 newStatement.setMonth(month);
                 newStatement.setYear(year);
                 newStatement.setValue(installmentValue);
+                newStatement.setTotalValue(installmentValue);
                 newStatement.setActive(i == 0);
                 card.getCardStatement().add(newStatement);
             }
@@ -159,16 +167,28 @@ public class TransactionService {
         auxService.save(card);
     }
 
+    public void refundTransaction(Long id) {
+        Optional<Transaction> transactionOptional = repository.findById(id);
 
-    public void createCreditTransaction(CreditTransactionDTO creditTransaction, User user) {
-        Transaction transaction = new Transaction();
-        transaction.setType(TransactionType.CREDIT);
-        transaction.setInstallmentsNumber(creditTransaction.installmentsNumber());
-        transaction.setAmount(creditTransaction.amount());
-        transaction.setStatus(TransactionStatus.COMPLETED);
-        transaction.setSender(user);
-        transaction.setReceiver(null);
-        repository.save(transaction);
+        LocalDateTime actualTime = LocalDateTime.now();
+
+        if(transactionOptional.isPresent() &&
+                transactionOptional.get().getDate().isBefore(actualTime.plusMinutes(10))) {
+
+            Transaction transaction = transactionOptional.get();
+            producer.send("refund-topic", transaction);
+
+            repository.save(transaction);
+        }
+    }
+
+    public void cancelTransaction(Long id) {
+        Optional<Transaction> transactionOptional = repository.findById(id);
+
+        if(transactionOptional.isPresent()) {
+            Transaction transaction = transactionOptional.get();
+            transaction.setStatus(TransactionStatus.CANCELLED);
+        }
     }
 
     private void validateTransaction(Transaction transaction){
