@@ -17,12 +17,6 @@ public class UserController {
         this.service = service;
     }
 
-    @PostMapping
-    public ResponseEntity postUser(@RequestBody User user) throws ArgumentAlreadyExistsException {
-        service.createUser(user);
-        return ResponseEntity.ok("User created");
-    }
-
     @PostMapping("/desactive")
     public ResponseEntity desactivateUser (@RequestBody DeleteRequestDTO request) {
         service.desactivateUser(request.id(), request.password());

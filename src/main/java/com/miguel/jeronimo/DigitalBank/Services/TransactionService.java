@@ -29,7 +29,7 @@ public class TransactionService {
     private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
 
     private final TransactionRepository repository;
-    private final TransactionAuxService auxService;
+    private TransactionAuxService auxService;
     private final TransactionProducer producer;
 
     public TransactionService(TransactionRepository repository, TransactionAuxService auxService, TransactionProducer producer) {
@@ -41,7 +41,7 @@ public class TransactionService {
     public Transaction DTOToPixEntity(TransactionDTO request) {
         Transaction transaction = new Transaction();
 
-        User sender = auxService.findUserById(request.sender().getId())
+        User sender = auxService.findUserById(auxService.getLoggedUserId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         User receiver = auxService.findUserByPixKey(request.receiver().getPixKey())
@@ -57,7 +57,7 @@ public class TransactionService {
     }
 
     public Transaction DTOtoDebitEntity(DebitTransactionDTO request) {
-        User user = auxService.findUserById(request.sender().getId())
+        User user = auxService.findUserById(auxService.getLoggedUserId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         Transaction transaction = new Transaction();
@@ -73,13 +73,16 @@ public class TransactionService {
     public void createPixTransaction(TransactionDTO request) throws InsufficientBalanceException {
         Transaction transaction = DTOToPixEntity(request);
 
+        Long id = auxService.getLoggedUserId();
+
         try {
 
             validateTransaction(transaction);
 
             transaction.setType(TransactionType.PIX);
             transaction.setStatus(TransactionStatus.PROCESSING);
-            producer.send("processPix-topic", transaction);
+
+            producer.send("processTransaction-topic", transaction);
 
 
         }catch (InsufficientBalanceException | IllegalArgumentException e) {
@@ -111,7 +114,7 @@ public class TransactionService {
 
     public void updateInstallment(CreditTransactionDTO transaction) {
 
-        User user = auxService.findUserById(transaction.sender().getId())
+        User user = auxService.findUserById(auxService.getLoggedUserId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         Card card = user.getCard();

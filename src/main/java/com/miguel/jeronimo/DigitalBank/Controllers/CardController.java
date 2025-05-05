@@ -35,7 +35,7 @@ public class CardController {
         return ResponseEntity.ok("Card deleted");
     }
 
-    @GetMapping
+    @GetMapping("/allCards")
     public ResponseEntity<List<CardResponseDTO>> getAllCards() {
         List<Card> cards = service.getAllCards();
         List<CardResponseDTO> response = cards.stream()
@@ -44,9 +44,9 @@ public class CardController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{userId}")
-    public ResponseEntity getUserCard(@PathVariable Long userId) {
-        Card card = service.getUserCard(userId);
+    @GetMapping
+    public ResponseEntity<CardResponseDTO> getUserCard() {
+        Card card = service.getUserCard();
         return ResponseEntity.ok(CardResponseDTO.fromEntity(card));
     }
 

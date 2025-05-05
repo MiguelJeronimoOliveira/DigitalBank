@@ -6,5 +6,5 @@ import com.miguel.jeronimo.DigitalBank.Enums.TransactionType;
 
 import java.math.BigDecimal;
 
-public record TransactionDTO(User sender, User receiver, BigDecimal amount) {
+public record TransactionDTO(User receiver, BigDecimal amount) {
 }

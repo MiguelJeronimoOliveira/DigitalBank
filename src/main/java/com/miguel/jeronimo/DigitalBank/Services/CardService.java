@@ -27,10 +27,11 @@ public class CardService {
     private final CardRepository repository;
     private final TransactionAuxService auxService;
 
-    public CardService(CardRepository repository, UserRepository userRepository, TransactionService auxService, TransactionAuxService auxService1) {
+    public CardService(CardRepository repository, TransactionAuxService auxService) {
         this.repository = repository;
-        this.auxService = auxService1;
+        this.auxService = auxService;
     }
+
 
     public Card DTOToEntity(CardDTO cardDTO) {
         Card card = new Card();
@@ -64,7 +65,7 @@ public class CardService {
     public void autodebit() {
         System.out.println("iniciando timer");
 
-        User user = auxService.findUserById(2L)
+        User user = auxService.findUserById(auxService.getLoggedUserId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         Card card = auxService.findCardById(user.getCard().getId())
@@ -107,7 +108,7 @@ public class CardService {
     }
 
     public void payActiveInstallment(CardDTO request) {
-        User user = auxService.findUserById(request.user().getId())
+        User user = auxService.findUserById(auxService.getLoggedUserId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         Optional<CardStatement> activeStatementOptional = auxService.findCardStatmentActiveByUserCard(user.getCard());
@@ -147,7 +148,7 @@ public class CardService {
     }
 
     public void payInstallments(PayInstallmentsDTO request) {
-        User user = auxService.findUserById(request.userId())
+        User user = auxService.findUserById(auxService.getLoggedUserId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         BigDecimal remainingValue = request.value();
@@ -235,8 +236,8 @@ public class CardService {
         return repository.findAll();
     }
 
-    public Card getUserCard(Long userId) {
-        User user = auxService.findUserById(userId)
+    public Card getUserCard() {
+        User user = auxService.findUserById(auxService.getLoggedUserId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         return user.getCard();
